@@ -1,0 +1,41 @@
+.job-wrapper {
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #f4fdf9;
+}
+
+.job-card {
+  background: white;
+  padding: 40px;
+  border-radius: 15px;
+  width: 400px;
+  box-shadow: 0px 5px 20px rgba(0,0,0,0.1);
+}
+
+.job-card h2 {
+  text-align: center;
+  margin-bottom: 20px;
+  color: #3EB489;
+}
+
+.job-card input,
+.job-card textarea,
+.job-card select {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 15px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+}
+
+.job-card button {
+  width: 100%;
+  padding: 12px;
+  background: #3EB489;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}

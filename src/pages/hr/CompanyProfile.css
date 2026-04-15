@@ -1,0 +1,40 @@
+.company-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background: #f5f7fa;
+}
+
+.company-card {
+  width: 420px;
+  padding: 30px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+}
+
+.company-card h2 {
+  margin-bottom: 20px;
+  text-align: center;
+  color: #3EB489;
+}
+
+.company-card input,
+.company-card textarea {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 15px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+}
+
+.company-card button {
+  width: 100%;
+  padding: 12px;
+  background: #3EB489;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
