@@ -1,397 +1,594 @@
-import React, { useEffect, useState } from "react";
-import axios from "../../api/axios";
-import "./CandidateDashboard.css";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useState } from "react";
 
-/* ─── icons ─── */
-const Ic = ({ d, size = 18, sw = 1.8 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
-    stroke="currentColor" strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round">
-    <path d={d} />
-  </svg>
-);
-const Icons = {
-  grid:      d => <Ic size={d} d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z" />,
-  briefcase: d => <Ic size={d} d="M21 13V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h7M16 3v4M8 3v4M3 9h18M19 15l2 2 4-4" />,
-  file:      d => <Ic size={d} d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M12 11v6M9 14h6" />,
-  bookmark:  d => <Ic size={d} d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />,
-  user:      d => <Ic size={d} d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8z" />,
-  settings:  d => <Ic size={d} d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />,
-  logout:    d => <Ic size={d} d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />,
-  bell:      d => <Ic size={d} d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0" />,
-  search:    d => <Ic size={d} d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />,
-  map:       d => <Ic size={d} d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 1 1 18 0z" />,
-  clock:     d => <Ic size={d} d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zM12 6v6l4 2" />,
-  trend:     d => <Ic size={d} d="M22 7l-8.5 8.5-5-5L1 18M22 7h-7M22 7v7" />,
-  check:     d => <Ic size={d} d="M20 6 9 17 4 12" />,
-  chevron:   d => <Ic size={d} d="M9 18l6-6-6-6" />,
-  plus:      d => <Ic size={d} d="M12 5v14M5 12h14" />,
-  eye:       d => <Ic size={d} d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z" />,
-  company:   d => <Ic size={d} d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM9 22V12h6v10" />,
+const NAV_ITEMS = [
+  {
+    section: "Menu",
+    items: [
+      {
+        id: "dashboard", label: "Dashboard", badge: null,
+        icon: (<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6" height="6" rx="1.5" fill="currentColor"/><rect x="9" y="1" width="6" height="6" rx="1.5" fill="currentColor" opacity=".6"/><rect x="1" y="9" width="6" height="6" rx="1.5" fill="currentColor" opacity=".6"/><rect x="9" y="9" width="6" height="6" rx="1.5" fill="currentColor" opacity=".4"/></svg>),
+      },
+      {
+        id: "profile", label: "My Profile", badge: null,
+        icon: (<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="5" r="3" stroke="currentColor" strokeWidth="1.5"/><path d="M2 13c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>),
+      },
+      {
+        id: "browse", label: "Browse Jobs", badge: null,
+        icon: (<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M2 8h9M2 12h6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>),
+      },
+      {
+        id: "applications", label: "Applications", badge: { label: "7", type: "purple" },
+        icon: (<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 2h10a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z" stroke="currentColor" strokeWidth="1.5"/><path d="M5 6h6M5 9h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>),
+      },
+      {
+        id: "interviews", label: "Interviews", badge: null,
+        icon: (<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="3" width="14" height="10" rx="2" stroke="currentColor" strokeWidth="1.5"/><path d="M1 6h14" stroke="currentColor" strokeWidth="1.5"/></svg>),
+      },
+      {
+        id: "saved", label: "Saved Jobs", badge: { label: "12", type: "amber" },
+        icon: (<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1l2 4 4.5.7-3.2 3.1.7 4.5L8 11.2l-4 2.1.7-4.5L1.5 5.7 6 5z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/></svg>),
+      },
+    ],
+  },
+  {
+    section: "Account",
+    items: [
+      {
+        id: "settings", label: "Settings", badge: null,
+        icon: (<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2.5" stroke="currentColor" strokeWidth="1.5"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.5 3.5l1.4 1.4M11.1 11.1l1.4 1.4M3.5 12.5l1.4-1.4M11.1 4.9l1.4-1.4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>),
+      },
+      {
+        id: "logout", label: "Logout", badge: null,
+        icon: (<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 8h9M8 5l3 3-3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><path d="M6 3H3a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>),
+      },
+    ],
+  },
+];
+
+const RECOMMENDED_JOBS = [
+  { id: 1, initials: "ST", bgColor: "#1a1033", textColor: "#a78bfa", title: "Senior Frontend Engineer", company: "Stripe", location: "San Francisco, CA · Remote", salary: "$145k–$175k", match: 98, matchType: "green" },
+  { id: 2, initials: "LI", bgColor: "#001a2e", textColor: "#60a5fa", title: "Full-Stack Developer", company: "Linear", location: "New York, NY · Hybrid", salary: "$130k–$160k", match: 95, matchType: "green" },
+  { id: 3, initials: "VR", bgColor: "#1c1a00", textColor: "#f59e0b", title: "React Developer", company: "Vercel", location: "Remote · Full-time", salary: "$120k–$150k", match: 90, matchType: "amber" },
+  { id: 4, initials: "NX", bgColor: "#001a14", textColor: "#22d68a", title: "Software Engineer II", company: "Notion", location: "Remote · Full-time", salary: "$125k–$155k", match: 88, matchType: "blue" },
+];
+
+const APPLICATIONS = [
+  { id: 1, dotColor: "#22d68a", title: "Stripe — Senior Frontend Engineer", date: "Applied Apr 10 · Technical round scheduled", status: "Interview", statusType: "green" },
+  { id: 2, dotColor: "#f59e0b", title: "Figma — Product Engineer", date: "Applied Apr 8 · Under review", status: "Reviewing", statusType: "amber" },
+  { id: 3, dotColor: "#60a5fa", title: "Linear — Full-Stack Developer", date: "Applied Apr 6 · Awaiting response", status: "Applied", statusType: "blue" },
+  { id: 4, dotColor: "#f87171", title: "Notion — Software Engineer", date: "Applied Mar 30 · Not selected", status: "Rejected", statusType: "red" },
+];
+
+const INTERVIEWS = [
+  { time: "10:00 AM", company: "Stripe", round: "Technical · Apr 16", label: "Tomorrow", type: "green" },
+  { time: "2:00 PM", company: "Figma", round: "HR Round · Apr 18", label: "Fri", type: "amber" },
+  { time: "11:30 AM", company: "Linear", round: "System Design · Apr 22", label: "Apr 22", type: "blue" },
+];
+
+const OFFERS = [
+  { initials: "GH", bgColor: "#001a2e", textColor: "#60a5fa", title: "GitHub — Staff Engineer", salary: "$165,000/yr", expiry: "Offer expires Apr 22", borderColor: "#22d68a" },
+  { initials: "CF", bgColor: "#1a1033", textColor: "#a78bfa", title: "Cloudflare — Frontend Dev", salary: "$142,000/yr", expiry: "Offer expires Apr 28", borderColor: "#f59e0b" },
+];
+
+const ALERTS = [
+  { title: "React Developer", sub: "Remote · Any salary", count: "12 new", type: "green" },
+  { title: "Full-Stack Engineer", sub: "SF / NY · $120k+", count: "8 new", type: "blue" },
+  { title: "TypeScript Developer", sub: "Hybrid · $100k+", count: "5 new", type: "amber" },
+];
+
+const SKILLS = ["React", "TypeScript", "Node.js", "PostgreSQL", "AWS", "GraphQL"];
+
+const PROFILE_PROGRESS = [
+  { label: "Resume", value: 100, color: "green" },
+  { label: "Work Experience", value: 100, color: "green" },
+  { label: "Skills", value: 80, color: "amber" },
+  { label: "Portfolio", value: 30, color: "red" },
+];
+
+// ─── Pill Component ──────────────────────────────────────────────────────────
+const pillStyles = {
+  green:  { background: "#0f4f3322", color: "#22d68a", border: "1px solid #22d68a33" },
+  amber:  { background: "#3d280022", color: "#f59e0b", border: "1px solid #f59e0b33" },
+  red:    { background: "#3d0f0f22", color: "#f87171", border: "1px solid #f8717133" },
+  blue:   { background: "#0f2a4a22", color: "#60a5fa", border: "1px solid #60a5fa33" },
+  purple: { background: "#2d1f6622", color: "#a78bfa", border: "1px solid #7c6aff44" },
 };
 
-/* ─── status config ─── */
-const STATUS = {
-  applied:   { label: "Applied",   color: "#2563EB", bg: "#EFF6FF" },
-  reviewing: { label: "Reviewing", color: "#7C3AED", bg: "#F5F3FF" },
-  interview: { label: "Interview", color: "#D97706", bg: "#FFFBEB" },
-  selected:  { label: "Selected",  color: "#059669", bg: "#ECFDF5" },
-  rejected:  { label: "Rejected",  color: "#DC2626", bg: "#FEF2F2" },
-};
-
-/* ─── avatar ─── */
-function Avatar({ name, size = 40 }) {
-  const ini = (name || "U").split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase();
+function Pill({ type = "blue", children, style = {} }) {
   return (
-    <div className="cd-avatar" style={{ width: size, height: size, fontSize: size * 0.34 }}>
-      {ini}
-    </div>
-  );
-}
-
-/* ─── status badge ─── */
-function Badge({ status }) {
-  const s = STATUS[status] || { label: status, color: "#6B7280", bg: "#F3F4F6" };
-  return (
-    <span className="cd-badge" style={{ color: s.color, background: s.bg }}>
-      {s.label}
+    <span style={{
+      display: "inline-flex", alignItems: "center",
+      padding: "3px 9px", borderRadius: 20,
+      fontSize: 11, fontWeight: 500,
+      ...pillStyles[type], ...style,
+    }}>
+      {children}
     </span>
   );
 }
 
-/* ─── nav items ─── */
-const NAV = [
-  { id: "dashboard",    label: "Dashboard",       icon: s => Icons.grid(s),      path: null },
-  { id: "jobs",         label: "Job Listings",     icon: s => Icons.briefcase(s), path: "/candidate/jobs" },
-  { id: "applications", label: "My Applications",  icon: s => Icons.file(s),      path: "/candidate/applications" },
-  { id: "saved",        label: "Saved Jobs",       icon: s => Icons.bookmark(s),  path: "/candidate/saved" },
-  { id: "profile",      label: "Profile",          icon: s => Icons.user(s),      path: "/candidate/profile" },
-  { id: "settings",     label: "Settings",         icon: s => Icons.settings(s),  path: "/candidate/settings" },
-];
-
-/* ══════════════════════════════════
-   MAIN
-══════════════════════════════════ */
-export default function CandidateDashboard() {
-  const user       = JSON.parse(localStorage.getItem("user") || "{}");
-  const navigate   = useNavigate();
-  const location   = useLocation();
-
-  const [jobs, setJobs]               = useState([]);
-  const [applications, setApps]       = useState([]);
-  const [loading, setLoading]         = useState(true);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [activeNav, setActiveNav]     = useState("dashboard");
-
-  const stats = {
-    applied:    applications.length,
-    interviews: applications.filter(a => a.status === "interview").length,
-    offers:     applications.filter(a => a.status === "selected").length,
-    reviewing:  applications.filter(a => a.status === "reviewing").length,
-  };
-
-  const completion = (() => {
-    let score = 20; // base
-    if (user?.name)  score += 20;
-    if (user?.email) score += 20;
-    if (applications.length > 0) score += 20;
-    if (jobs.length > 0) score += 20;
-    return score;
-  })();
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const [jobsRes, appRes] = await Promise.all([
-          axios.get("/jobs/list/"),
-          axios.get("/applications/list/"),
-        ]);
-        setJobs(jobsRes.data);
-        setApps(appRes.data);
-      } catch {}
-      finally { setLoading(false); }
-    })();
-  }, []);
-
-  const handleNav = (item) => {
-    setActiveNav(item.id);
-    setSidebarOpen(false);
-    if (item.path) navigate(item.path);
-  };
-
-  const handleApply = async (jobId) => {
-    try {
-      await axios.post("/applications/apply/", { job: jobId });
-      const r = await axios.get("/applications/list/");
-      setApps(r.data);
-    } catch {}
-  };
-
-  /* ════════ RENDER ════════ */
+// ─── Sidebar ─────────────────────────────────────────────────────────────────
+function Sidebar({ active, onNav }) {
   return (
-    <div className="cd-root">
+    <aside style={{
+      width: 220, background: "#15161e",
+      borderRight: "1px solid #2e2f44",
+      padding: "1.5rem 1rem",
+      display: "flex", flexDirection: "column", gap: 6,
+      minHeight: "100vh", flexShrink: 0,
+    }}>
+      <div style={{
+        fontFamily: "'Syne', sans-serif", fontSize: 18, fontWeight: 700,
+        color: "#a78bfa", padding: "0 0.5rem 1.2rem",
+        borderBottom: "1px solid #2e2f44", marginBottom: "0.5rem", letterSpacing: -0.5,
+      }}>
+        hire<span style={{ color: "#62637e" }}>.</span>track
+      </div>
 
-      {/* mobile overlay */}
-      {sidebarOpen && <div className="cd-overlay" onClick={() => setSidebarOpen(false)} />}
-
-      {/* ── SIDEBAR ── */}
-      <aside className={`cd-sidebar ${sidebarOpen ? "cd-sidebar--open" : ""}`}>
-        <div className="cd-sidebar__logo">
-          <div className="cd-logo-mark">
-            <Icons.briefcase size={18} />
+      {NAV_ITEMS.map((group) => (
+        <div key={group.section}>
+          <div style={{ fontSize: 11, color: "#62637e", padding: "12px 12px 4px", textTransform: "uppercase", letterSpacing: 1 }}>
+            {group.section}
           </div>
-          <span className="cd-logo-text">JobPortal</span>
+          {group.items.map((item) => {
+            const isActive = active === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => onNav(item.id)}
+                style={{
+                  display: "flex", alignItems: "center", gap: 10,
+                  padding: "9px 12px", borderRadius: 8, cursor: "pointer",
+                  fontSize: 13.5, width: "100%", border: "none",
+                  background: isActive ? "#4f46e522" : "transparent",
+                  color: isActive ? "#a78bfa" : "#a0a1c0",
+                  fontWeight: isActive ? 500 : 400,
+                  fontFamily: "'DM Sans', sans-serif",
+                  transition: "all 0.15s",
+                }}
+              >
+                <span style={{ opacity: 0.8, display: "flex", alignItems: "center" }}>{item.icon}</span>
+                {item.label}
+                {item.badge && (
+                  <Pill type={item.badge.type} style={{ marginLeft: "auto", padding: "2px 7px" }}>
+                    {item.badge.label}
+                  </Pill>
+                )}
+              </button>
+            );
+          })}
         </div>
+      ))}
 
-        <div className="cd-sidebar__profile">
-          <Avatar name={user?.name} size={44} />
+      <div style={{ marginTop: "auto", paddingTop: "1rem", borderTop: "1px solid #2e2f44" }}>
+        <div style={{
+          display: "flex", alignItems: "center", gap: 10,
+          padding: "8px 10px", borderRadius: 8, cursor: "pointer",
+        }}>
+          <div style={{
+            width: 34, height: 34, borderRadius: "50%",
+            background: "linear-gradient(135deg,#7c6aff,#a78bfa)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontFamily: "'Syne', sans-serif", fontSize: 13, fontWeight: 700, color: "#fff", flexShrink: 0,
+          }}>AK</div>
           <div>
-            <p className="cd-sidebar__name">{user?.name || "Candidate"}</p>
-            <p className="cd-sidebar__role">Job Seeker</p>
-          </div>
-        </div>
-
-        {/* profile completion */}
-        <div className="cd-completion">
-          <div className="cd-completion__top">
-            <span>Profile Strength</span>
-            <span className="cd-completion__pct">{completion}%</span>
-          </div>
-          <div className="cd-completion__bar">
-            <div className="cd-completion__fill" style={{ width: `${completion}%` }} />
-          </div>
-        </div>
-
-        <nav className="cd-nav">
-          {NAV.map(item => (
-            <button
-              key={item.id}
-              className={`cd-nav__item ${activeNav === item.id ? "cd-nav__item--active" : ""}`}
-              onClick={() => handleNav(item)}
-            >
-              <span className="cd-nav__icon">{item.icon(17)}</span>
-              <span className="cd-nav__label">{item.label}</span>
-              {activeNav === item.id && <span className="cd-nav__pip" />}
-            </button>
-          ))}
-        </nav>
-
-        <button className="cd-nav__item cd-nav__item--logout"
-          onClick={() => { localStorage.clear(); navigate("/login"); }}>
-          <span className="cd-nav__icon"><Icons.logout size={17} /></span>
-          <span className="cd-nav__label">Logout</span>
-        </button>
-      </aside>
-
-      {/* ── MAIN ── */}
-      <div className="cd-main">
-
-        {/* TOPBAR */}
-        <header className="cd-topbar">
-          <div className="cd-topbar__left">
-            <button className="cd-hamburger" onClick={() => setSidebarOpen(o => !o)}>
-              <span /><span /><span />
-            </button>
-            <div className="cd-search">
-              <span className="cd-search__icon"><Icons.search size={15} /></span>
-              <input placeholder="Search jobs, companies…" />
-            </div>
-          </div>
-          <div className="cd-topbar__right">
-            <button className="cd-topbar__icon-btn">
-              <Icons.bell size={18} />
-              <span className="cd-notif-dot" />
-            </button>
-            <Avatar name={user?.name} size={36} />
-          </div>
-        </header>
-
-        {/* SCROLL BODY */}
-        <div className="cd-body">
-
-          {/* GREETING */}
-          <div className="cd-greeting">
-            <div>
-              <h1 className="cd-greeting__title">
-                Good morning, <span>{user?.name?.split(" ")[0] || "there"}</span> 👋
-              </h1>
-              <p className="cd-greeting__sub">Here's what's happening with your job search today.</p>
-            </div>
-            <button className="cd-btn cd-btn--primary"
-              onClick={() => navigate("/candidate/jobs")}>
-              <Icons.plus size={15} /> Browse Jobs
-            </button>
-          </div>
-
-          {/* STAT CARDS */}
-          <div className="cd-stats">
-            {[
-              { label: "Total Applied",  value: stats.applied,    icon: <Icons.file size={20} />,      color: "blue"   },
-              { label: "In Review",      value: stats.reviewing,  icon: <Icons.eye size={20} />,       color: "violet" },
-              { label: "Interviews",     value: stats.interviews, icon: <Icons.briefcase size={20} />, color: "amber"  },
-              { label: "Offers",         value: stats.offers,     icon: <Icons.check size={20} />,     color: "green"  },
-            ].map(s => (
-              <div className={`cd-stat-card cd-stat-card--${s.color}`} key={s.label}>
-                <div className="cd-stat-card__icon">{s.icon}</div>
-                <div>
-                  <p className="cd-stat-card__value">{s.value}</p>
-                  <p className="cd-stat-card__label">{s.label}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* TWO COLUMNS */}
-          <div className="cd-columns">
-
-            {/* LEFT */}
-            <div className="cd-col-main">
-
-              {/* RECOMMENDED JOBS */}
-              <div className="cd-panel">
-                <div className="cd-panel__head">
-                  <h2 className="cd-panel__title">Recommended Jobs</h2>
-                  <button className="cd-link" onClick={() => navigate("/candidate/jobs")}>
-                    View all <Icons.chevron size={14} />
-                  </button>
-                </div>
-
-                {loading ? (
-                  <div className="cd-skeleton-list">
-                    {[1, 2, 3].map(i => <div className="cd-skeleton" key={i} />)}
-                  </div>
-                ) : jobs.length === 0 ? (
-                  <div className="cd-empty">
-                    <Icons.briefcase size={36} />
-                    <p>No jobs available right now</p>
-                  </div>
-                ) : (
-                  <div className="cd-job-list">
-                    {jobs.slice(0, 4).map(job => {
-                      const applied = applications.some(a => a.job === job.id);
-                      return (
-                        <div className="cd-job-card" key={job.id}>
-                          <div className="cd-job-card__logo">
-                            <Icons.company size={20} />
-                          </div>
-                          <div className="cd-job-card__body">
-                            <div className="cd-job-card__top">
-                              <div>
-                                <h4 className="cd-job-card__title">{job.title}</h4>
-                                <p className="cd-job-card__company">{job.company_name || "Company"}</p>
-                              </div>
-                              {job.salary && (
-                                <span className="cd-job-card__salary">{job.salary}</span>
-                              )}
-                            </div>
-                            <p className="cd-job-card__desc">
-                              {(job.description || "").substring(0, 90)}…
-                            </p>
-                            <div className="cd-job-card__foot">
-                              <div className="cd-job-card__chips">
-                                {job.location && (
-                                  <span className="cd-chip"><Icons.map size={11} />{job.location}</span>
-                                )}
-                                {job.job_type && (
-                                  <span className="cd-chip"><Icons.clock size={11} />{job.job_type}</span>
-                                )}
-                              </div>
-                              <button
-                                className={`cd-btn cd-btn--sm ${applied ? "cd-btn--applied" : "cd-btn--primary"}`}
-                                onClick={() => !applied && handleApply(job.id)}
-                                disabled={applied}
-                              >
-                                {applied ? <><Icons.check size={13} /> Applied</> : "Apply Now"}
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              {/* MY APPLICATIONS */}
-              <div className="cd-panel">
-                <div className="cd-panel__head">
-                  <h2 className="cd-panel__title">My Applications</h2>
-                  <button className="cd-link" onClick={() => navigate("/candidate/applications")}>
-                    View all <Icons.chevron size={14} />
-                  </button>
-                </div>
-
-                {applications.length === 0 ? (
-                  <div className="cd-empty">
-                    <Icons.file size={36} />
-                    <p>No applications yet. Start applying!</p>
-                  </div>
-                ) : (
-                  <div className="cd-app-list">
-                    {applications.slice(0, 4).map(app => (
-                      <div className="cd-app-row" key={app.id}>
-                        <div className="cd-app-row__logo">
-                          <Icons.company size={16} />
-                        </div>
-                        <div className="cd-app-row__info">
-                          <p className="cd-app-row__title">{app.job_title || "Position"}</p>
-                          <p className="cd-app-row__company">{app.company_name || "Company"}</p>
-                        </div>
-                        <Badge status={app.status} />
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-            </div>
-
-            {/* RIGHT */}
-            <div className="cd-col-side">
-
-              {/* APPLICATION PIPELINE */}
-              <div className="cd-panel">
-                <h2 className="cd-panel__title" style={{ marginBottom: 16 }}>Application Pipeline</h2>
-                {[
-                  { label: "Applied",   count: stats.applied,    color: "#2563EB" },
-                  { label: "Reviewing", count: stats.reviewing,  color: "#7C3AED" },
-                  { label: "Interview", count: stats.interviews, color: "#D97706" },
-                  { label: "Offer",     count: stats.offers,     color: "#059669" },
-                ].map(step => (
-                  <div className="cd-pipeline-step" key={step.label}>
-                    <div className="cd-pipeline-step__dot" style={{ background: step.color }} />
-                    <span className="cd-pipeline-step__label">{step.label}</span>
-                    <span className="cd-pipeline-step__count">{step.count}</span>
-                    <div className="cd-pipeline-step__bar">
-                      <div style={{
-                        width: stats.applied > 0 ? `${(step.count / stats.applied) * 100}%` : "0%",
-                        background: step.color
-                      }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* TIPS */}
-              <div className="cd-panel cd-tips">
-                <h2 className="cd-panel__title">Quick Tips</h2>
-                {[
-                  "Complete your profile to get noticed",
-                  "Upload your latest resume",
-                  "Apply early — recruiters check first",
-                  "Tailor your cover letter each time",
-                ].map((t, i) => (
-                  <div className="cd-tip" key={i}>
-                    <span className="cd-tip__num">{i + 1}</span>
-                    <p>{t}</p>
-                  </div>
-                ))}
-              </div>
-
-            </div>
+            <div style={{ fontSize: 13, fontWeight: 500, color: "#f0f0f8" }}>Arjun Kumar</div>
+            <div style={{ fontSize: 11, color: "#62637e" }}>Full-Stack Dev</div>
           </div>
         </div>
       </div>
+    </aside>
+  );
+}
+
+// ─── Topbar ──────────────────────────────────────────────────────────────────
+function Topbar({ search, onSearch }) {
+  return (
+    <div style={{
+      display: "flex", alignItems: "center", justifyContent: "space-between",
+      padding: "1rem 1.5rem", borderBottom: "1px solid #2e2f44",
+      background: "#15161e", position: "sticky", top: 0, zIndex: 10,
+    }}>
+      <div>
+        <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: 17, fontWeight: 600, letterSpacing: -0.3, color: "#f0f0f8" }}>
+          Good morning, Arjun 👋
+        </h1>
+        <p style={{ fontSize: 12.5, color: "#62637e", marginTop: 2 }}>
+          Wednesday, April 15, 2026 — 3 interviews scheduled this week
+        </p>
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{
+          display: "flex", alignItems: "center", gap: 8,
+          background: "#1c1d28", border: "1px solid #2e2f44",
+          borderRadius: 8, padding: "7px 12px", width: 220,
+        }}>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <circle cx="6" cy="6" r="4.5" stroke="#62637e" strokeWidth="1.4"/>
+            <path d="M10 10l2.5 2.5" stroke="#62637e" strokeWidth="1.4" strokeLinecap="round"/>
+          </svg>
+          <input
+            value={search}
+            onChange={(e) => onSearch(e.target.value)}
+            placeholder="Search jobs, companies..."
+            style={{
+              background: "none", border: "none", outline: "none",
+              color: "#f0f0f8", fontSize: 13, fontFamily: "'DM Sans', sans-serif", width: "100%",
+            }}
+          />
+        </div>
+        <div style={{ position: "relative" }}>
+          <button style={{
+            width: 36, height: 36, borderRadius: 8, background: "#1c1d28",
+            border: "1px solid #2e2f44", display: "flex", alignItems: "center",
+            justifyContent: "center", cursor: "pointer",
+          }}>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M8 1a5 5 0 0 1 5 5c0 3.5 1.5 4.5 1.5 4.5H1.5S3 9.5 3 6a5 5 0 0 1 5-5z" stroke="#a0a1c0" strokeWidth="1.4"/>
+              <path d="M6.5 13.5a1.5 1.5 0 0 0 3 0" stroke="#a0a1c0" strokeWidth="1.4"/>
+            </svg>
+          </button>
+          <span style={{
+            width: 7, height: 7, background: "#7c6aff", borderRadius: "50%",
+            position: "absolute", top: 6, right: 6, border: "2px solid #15161e",
+          }}/>
+        </div>
+        <button style={{
+          width: 36, height: 36, borderRadius: 8, background: "#1c1d28",
+          border: "1px solid #2e2f44", display: "flex", alignItems: "center",
+          justifyContent: "center", cursor: "pointer",
+        }}>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <rect x="1" y="3" width="14" height="10" rx="1.5" stroke="#a0a1c0" strokeWidth="1.4"/>
+            <path d="M1 6l7 4.5L15 6" stroke="#a0a1c0" strokeWidth="1.4"/>
+          </svg>
+        </button>
+      </div>
     </div>
+  );
+}
+
+// ─── Stat Cards ──────────────────────────────────────────────────────────────
+function StatsRow() {
+  const stats = [
+    { label: "Applications", value: 24, valueColor: "#a78bfa", sub: "↑ 4 this week", subColor: "#22d68a" },
+    { label: "In Review",    value: 9,  valueColor: "#f59e0b", sub: "↑ 2 new updates", subColor: "#22d68a" },
+    { label: "Interviews",   value: 5,  valueColor: "#22d68a", sub: "↑ 3 scheduled",   subColor: "#22d68a" },
+    { label: "Offers",       value: 2,  valueColor: "#60a5fa", sub: "Pending review",  subColor: "#62637e" },
+  ];
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12, marginBottom: "1.5rem" }}>
+      {stats.map((s) => (
+        <div key={s.label} style={{
+          background: "#15161e", border: "1px solid #2e2f44",
+          borderRadius: 16, padding: "1.1rem 1.2rem",
+        }}>
+          <div style={{ fontSize: 12, color: "#62637e", marginBottom: 6, textTransform: "uppercase", letterSpacing: 0.5 }}>{s.label}</div>
+          <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 26, fontWeight: 700, color: s.valueColor }}>{s.value}</div>
+          <div style={{ fontSize: 12, color: s.subColor, marginTop: 4 }}>{s.sub}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── Recommended Jobs ────────────────────────────────────────────────────────
+function RecommendedJobs() {
+  return (
+    <div style={{ background: "#15161e", border: "1px solid #2e2f44", borderRadius: 16, padding: "1.2rem", marginBottom: 14 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem" }}>
+        <span style={{ fontFamily: "'Syne', sans-serif", fontSize: 14, fontWeight: 600, color: "#f0f0f8" }}>Recommended Jobs</span>
+        <span style={{ fontSize: 12, color: "#a78bfa", cursor: "pointer" }}>View all →</span>
+      </div>
+      {RECOMMENDED_JOBS.map((job) => (
+        <div key={job.id} style={{
+          display: "flex", alignItems: "center", gap: 12,
+          padding: "10px 0", borderBottom: job.id < RECOMMENDED_JOBS.length ? "1px solid #2e2f44" : "none",
+          cursor: "pointer",
+        }}>
+          <div style={{
+            width: 38, height: 38, borderRadius: 9,
+            background: job.bgColor, color: job.textColor,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontFamily: "'Syne', sans-serif", fontSize: 12, fontWeight: 700,
+            flexShrink: 0, border: "1px solid #2e2f44",
+          }}>{job.initials}</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 13.5, fontWeight: 500, color: "#f0f0f8", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{job.title}</div>
+            <div style={{ fontSize: 12, color: "#62637e", marginTop: 2 }}>{job.company} · {job.location}</div>
+          </div>
+          <div style={{ textAlign: "right", flexShrink: 0 }}>
+            <div style={{ fontSize: 13, fontWeight: 500, color: "#22d68a" }}>{job.salary}</div>
+            <div style={{ marginTop: 2 }}>
+              <Pill type={job.matchType}>{job.match}% match</Pill>
+            </div>
+          </div>
+        </div>
+      ))}
+      <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+        <button style={{
+          padding: "8px 16px", borderRadius: 8, fontSize: 13,
+          fontFamily: "'DM Sans', sans-serif", fontWeight: 500,
+          cursor: "pointer", border: "none", background: "#7c6aff", color: "#fff",
+        }}>Browse All Jobs</button>
+        <button style={{
+          padding: "8px 16px", borderRadius: 8, fontSize: 13,
+          fontFamily: "'DM Sans', sans-serif", fontWeight: 500,
+          cursor: "pointer", background: "transparent",
+          border: "1px solid #3a3b55", color: "#a0a1c0",
+        }}>Edit Preferences</button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Application Pipeline ────────────────────────────────────────────────────
+function ApplicationPipeline() {
+  return (
+    <div style={{ background: "#15161e", border: "1px solid #2e2f44", borderRadius: 16, padding: "1.2rem" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem" }}>
+        <span style={{ fontFamily: "'Syne', sans-serif", fontSize: 14, fontWeight: 600, color: "#f0f0f8" }}>Application Pipeline</span>
+        <span style={{ fontSize: 12, color: "#a78bfa", cursor: "pointer" }}>See all 24 →</span>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {APPLICATIONS.map((app) => (
+          <div key={app.id} style={{
+            display: "flex", alignItems: "center", gap: 10,
+            background: "#1c1d28", borderRadius: 10,
+            padding: "10px 12px", border: "1px solid #2e2f44",
+          }}>
+            <div style={{ width: 8, height: 8, borderRadius: "50%", background: app.dotColor, flexShrink: 0 }}/>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 500, color: "#f0f0f8" }}>{app.title}</div>
+              <div style={{ fontSize: 11.5, color: "#62637e", marginTop: 2 }}>{app.date}</div>
+            </div>
+            <Pill type={app.statusType}>{app.status}</Pill>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Profile Strength ────────────────────────────────────────────────────────
+function ProfileStrength() {
+  const progressColors = { green: ["#0f4f33", "#22d68a"], amber: ["#3d2800", "#f59e0b"], red: ["#3d0f0f", "#f87171"] };
+  return (
+    <div style={{ background: "#15161e", border: "1px solid #2e2f44", borderRadius: 16, padding: "1.2rem" }}>
+      <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 14, fontWeight: 600, color: "#f0f0f8", marginBottom: "1rem" }}>Profile Strength</div>
+      <div style={{ textAlign: "center", padding: "0.5rem 0 1rem" }}>
+        <div style={{ width: 100, height: 100, margin: "0 auto 10px", position: "relative" }}>
+          <svg width="100" height="100" viewBox="0 0 100 100" style={{ transform: "rotate(-90deg)" }}>
+            <circle cx="50" cy="50" r="40" fill="none" stroke="#23243280" strokeWidth="10"/>
+            <circle cx="50" cy="50" r="40" fill="none" stroke="url(#pg)" strokeWidth="10"
+              strokeDasharray="251" strokeDashoffset="60" strokeLinecap="round"/>
+            <defs>
+              <linearGradient id="pg" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stopColor="#4f46e5"/>
+                <stop offset="100%" stopColor="#a78bfa"/>
+              </linearGradient>
+            </defs>
+          </svg>
+          <div style={{
+            position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center",
+            fontFamily: "'Syne', sans-serif", fontSize: 22, fontWeight: 700, color: "#f0f0f8",
+          }}>76%</div>
+        </div>
+        <div style={{ fontSize: 13, color: "#62637e" }}>Add portfolio & certifications to reach 100%</div>
+      </div>
+
+      {PROFILE_PROGRESS.map((p) => (
+        <div key={p.label} style={{ marginBottom: 14 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, marginBottom: 5 }}>
+            <span style={{ color: "#a0a1c0" }}>{p.label}</span>
+            <span style={{ color: progressColors[p.color][1] }}>{p.value}%</span>
+          </div>
+          <div style={{ height: 6, background: "#1c1d28", borderRadius: 3, overflow: "hidden" }}>
+            <div style={{
+              height: "100%", width: `${p.value}%`, borderRadius: 3,
+              background: `linear-gradient(90deg, ${progressColors[p.color][0]}, ${progressColors[p.color][1]})`,
+            }}/>
+          </div>
+        </div>
+      ))}
+
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
+        {SKILLS.map((s) => (
+          <span key={s} style={{
+            background: "#1c1d28", border: "1px solid #3a3b55", borderRadius: 6,
+            padding: "4px 10px", fontSize: 12, color: "#a0a1c0",
+          }}>{s}</span>
+        ))}
+      </div>
+      <button style={{
+        width: "100%", marginTop: 12, padding: "8px 16px", borderRadius: 8,
+        fontSize: 13, fontFamily: "'DM Sans', sans-serif", fontWeight: 500,
+        cursor: "pointer", background: "transparent", border: "1px solid #3a3b55", color: "#a0a1c0",
+      }}>Complete Profile</button>
+    </div>
+  );
+}
+
+// ─── Upcoming Interviews ─────────────────────────────────────────────────────
+function UpcomingInterviews() {
+  const borderColors = { green: "#22d68a", amber: "#f59e0b", blue: "#60a5fa" };
+  return (
+    <div style={{ background: "#15161e", border: "1px solid #2e2f44", borderRadius: 16, padding: "1.2rem" }}>
+      <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 14, fontWeight: 600, color: "#f0f0f8", marginBottom: "1rem" }}>
+        Upcoming Interviews
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {INTERVIEWS.map((iv, i) => (
+          <div key={i} style={{
+            display: "flex", gap: 10, alignItems: "center",
+            padding: "9px 10px", background: "#1c1d28", borderRadius: 8,
+            borderLeft: `3px solid ${borderColors[iv.type]}`,
+          }}>
+            <div style={{ fontSize: 11, color: "#a78bfa", fontWeight: 500, minWidth: 44 }}>{iv.time}</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 12.5, fontWeight: 500, color: "#f0f0f8" }}>{iv.company}</div>
+              <div style={{ fontSize: 11.5, color: "#62637e" }}>{iv.round}</div>
+            </div>
+            <Pill type={iv.type} style={{ fontSize: 10.5 }}>{iv.label}</Pill>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Offers Received ─────────────────────────────────────────────────────────
+function OffersReceived() {
+  return (
+    <div style={{ background: "#15161e", border: "1px solid #2e2f44", borderRadius: 16, padding: "1.2rem" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem" }}>
+        <span style={{ fontFamily: "'Syne', sans-serif", fontSize: 14, fontWeight: 600, color: "#f0f0f8" }}>Offers Received</span>
+        <span style={{ fontSize: 12, color: "#a78bfa", cursor: "pointer" }}>Manage →</span>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {OFFERS.map((offer, i) => (
+          <div key={i} style={{
+            display: "flex", alignItems: "center", gap: 10,
+            background: "#1c1d28", borderRadius: 10,
+            padding: "10px 12px", border: `1px solid ${offer.borderColor}22`,
+          }}>
+            <div style={{
+              width: 36, height: 36, borderRadius: 9,
+              background: offer.bgColor, color: offer.textColor,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontFamily: "'Syne', sans-serif", fontSize: 11, fontWeight: 700, flexShrink: 0,
+              border: "1px solid #2e2f44",
+            }}>{offer.initials}</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 500, color: "#f0f0f8" }}>{offer.title}</div>
+              <div style={{ fontSize: 11.5, color: offer.borderColor, marginTop: 2 }}>{offer.salary} · {offer.expiry}</div>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+              <button style={{
+                padding: "5px 12px", borderRadius: 8, fontSize: 12,
+                fontFamily: "'DM Sans', sans-serif", fontWeight: 500,
+                cursor: "pointer", border: "none", background: "#7c6aff", color: "#fff",
+              }}>Accept</button>
+              <button style={{
+                padding: "5px 12px", borderRadius: 8, fontSize: 12,
+                fontFamily: "'DM Sans', sans-serif", fontWeight: 500,
+                cursor: "pointer", background: "transparent",
+                border: "1px solid #3a3b55", color: "#a0a1c0",
+              }}>Decline</button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Job Alerts ──────────────────────────────────────────────────────────────
+function JobAlerts() {
+  return (
+    <div style={{ background: "#15161e", border: "1px solid #2e2f44", borderRadius: 16, padding: "1.2rem" }}>
+      <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 14, fontWeight: 600, color: "#f0f0f8", marginBottom: "1rem" }}>
+        Job Alert Activity
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
+        {ALERTS.map((a, i) => (
+          <div key={i} style={{
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            padding: "8px 10px", background: "#1c1d28", borderRadius: 8,
+          }}>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 500, color: "#f0f0f8" }}>{a.title}</div>
+              <div style={{ fontSize: 11.5, color: "#62637e" }}>{a.sub}</div>
+            </div>
+            <Pill type={a.type}>{a.count}</Pill>
+          </div>
+        ))}
+      </div>
+      <button style={{
+        width: "100%", marginTop: 12, padding: "8px 16px", borderRadius: 8,
+        fontSize: 13, fontFamily: "'DM Sans', sans-serif", fontWeight: 500,
+        cursor: "pointer", background: "transparent", border: "1px solid #3a3b55", color: "#a0a1c0",
+      }}>Manage Job Alerts</button>
+    </div>
+  );
+}
+
+// ─── Main Dashboard Page ─────────────────────────────────────────────────────
+function DashboardPage() {
+  return (
+    <div style={{ padding: "1.5rem" }}>
+      <StatsRow />
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: 14, marginBottom: "1.5rem" }}>
+        <div>
+          <RecommendedJobs />
+          <ApplicationPipeline />
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <ProfileStrength />
+          <UpcomingInterviews />
+        </div>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+        <OffersReceived />
+        <JobAlerts />
+      </div>
+    </div>
+  );
+}
+
+// ─── Placeholder Pages ───────────────────────────────────────────────────────
+function Placeholder({ title }) {
+  return (
+    <div style={{ padding: "3rem 1.5rem", textAlign: "center", color: "#62637e" }}>
+      <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 20, fontWeight: 600, color: "#a0a1c0", marginBottom: 8 }}>{title}</div>
+      <div style={{ fontSize: 14 }}>This section is under construction.</div>
+    </div>
+  );
+}
+
+// ─── Root App ─────────────────────────────────────────────────────────────────
+export default function CandidateDashboard() {
+  const [activeNav, setActiveNav] = useState("dashboard");
+  const [search, setSearch] = useState("");
+
+  const pageMap = {
+    dashboard:    <DashboardPage />,
+    profile:      <Placeholder title="My Profile" />,
+    browse:       <Placeholder title="Browse Jobs" />,
+    applications: <Placeholder title="Applications" />,
+    interviews:   <Placeholder title="Interviews" />,
+    saved:        <Placeholder title="Saved Jobs" />,
+    settings:     <Placeholder title="Settings" />,
+    logout:       <Placeholder title="Logout" />,
+  };
+
+  return (
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:wght@300;400;500&display=swap');
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: #0e0f14; }
+        button:focus { outline: none; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #15161e; }
+        ::-webkit-scrollbar-thumb { background: #2e2f44; border-radius: 3px; }
+        input::placeholder { color: #62637e; }
+      `}</style>
+
+      <div style={{
+        display: "flex", minHeight: "100vh",
+        background: "#0e0f14", color: "#f0f0f8",
+        fontFamily: "'DM Sans', sans-serif",
+      }}>
+        <Sidebar active={activeNav} onNav={setActiveNav} />
+
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
+          <Topbar search={search} onSearch={setSearch} />
+          <div style={{ flex: 1, overflowY: "auto" }}>
+            {pageMap[activeNav] || <DashboardPage />}
+          </div>
+        </div>
+      </div>
+    </>
   );
 }
