@@ -44,7 +44,7 @@ const handleSubmit = async (e) => {
       }
 
     } else {
-      navigate("/candidate/dashboard");
+      navigate("/candidate/CandidateDashboard");
     }
 
   } catch (err) {
