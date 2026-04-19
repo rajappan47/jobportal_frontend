@@ -1,10 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "../../api/axios";
 import { useNavigate } from "react-router-dom";
-import { 
-  FiArrowLeft, FiBriefcase, FiMapPin, FiClock, 
-  FiEdit3, FiAward, FiCalendar 
-} from "react-icons/fi";
+import { FiArrowLeft, FiBriefcase, FiMapPin, FiClock, FiEdit3, FiAward, FiCalendar } from "react-icons/fi";
 import "./CreateJob.css";
 
 function CreateJob() {
@@ -28,15 +25,19 @@ function CreateJob() {
       try {
         const res = await axios.get("/companies/list/");
         if (res.data.length > 0) {
+          // Because of the backend fix, res.data[0] is now definitely Rajappan's company
           setCompanyId(res.data[0].id);
           setCompanyName(res.data[0].company_name);
+        } else {
+          alert("No company found. Redirecting to create one.");
+          navigate("/hr/company-profile");
         }
       } catch (err) {
         console.error("Error loading company", err);
       }
     };
     fetchCompany();
-  }, []);
+  }, [navigate]);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -44,14 +45,15 @@ function CreateJob() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!companyId) return alert("Verify company profile first!");
+    
     setLoading(true);
     try {
       await axios.post("/jobs/create/", { ...form, company: companyId });
       alert("Job Posted Successfully 🚀");
       navigate("/hr/dashboard");
     } catch (err) {
-      console.error(err);
-      alert("Error posting job");
+      alert(err.response?.data?.error || "Error posting job");
     } finally {
       setLoading(false);
     }
@@ -60,39 +62,32 @@ function CreateJob() {
   return (
     <div className="create-job-wrapper">
       <div className="side-accent"></div>
-      
       <div className="create-job-container">
         <div className="form-header">
           <button className="back-link" onClick={() => navigate(-1)}>
             <FiArrowLeft /> Back to Dashboard
           </button>
           <h2>Post a New Opening</h2>
-          <p>You are hiring for <span className="highlight">{companyName}</span></p>
+          <p>You are hiring for <span className="highlight">{companyName || "Loading..."}</span></p>
         </div>
 
         <form onSubmit={handleSubmit} className="modern-job-form">
           <div className="form-grid">
-            
-            {/* Left Column: Role Details */}
             <div className="form-column">
               <div className="input-section">
                 <label><FiEdit3 /> Job Title</label>
                 <input type="text" name="title" placeholder="e.g. Senior Product Designer" onChange={handleChange} required />
               </div>
-
               <div className="input-section">
                 <label><FiMapPin /> Work Location</label>
                 <input type="text" name="location" value={form.location} onChange={handleChange} required />
               </div>
-
               <div className="row-group">
                 <div className="input-section">
                   <label><FiClock /> Job Type</label>
                   <select name="job_type" value={form.job_type} onChange={handleChange}>
                     <option value="Full-Time">Full-Time</option>
                     <option value="Part-Time">Part-Time</option>
-                    <option value="Contract">Contract</option>
-                    <option value="Internship">Internship</option>
                   </select>
                 </div>
                 <div className="input-section">
@@ -102,21 +97,18 @@ function CreateJob() {
               </div>
             </div>
 
-            {/* Right Column: Skills & Deadline */}
             <div className="form-column">
               <div className="input-section">
                 <label><FiCalendar /> Application Deadline</label>
                 <input type="date" name="deadline" onChange={handleChange} />
               </div>
-
               <div className="input-section">
                 <label><FiBriefcase /> Required Skills</label>
-                <input type="text" name="required_skills" placeholder="React, Node.js, Figma..." onChange={handleChange} required />
+                <input type="text" name="required_skills" placeholder="React, Node.js..." onChange={handleChange} required />
               </div>
-
               <div className="input-section">
                 <label>Job Description</label>
-                <textarea name="description" placeholder="Write about the role and company culture..." rows="5" onChange={handleChange} required />
+                <textarea name="description" placeholder="Describe the role..." rows="5" onChange={handleChange} required />
               </div>
             </div>
           </div>

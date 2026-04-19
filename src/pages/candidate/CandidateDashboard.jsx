@@ -3,7 +3,7 @@ import axios from "../../api/axios";
 import { useNavigate } from "react-router-dom";
 import { 
   FiBriefcase, FiCheckCircle, FiXCircle, FiSearch, 
-  FiMapPin, FiClock, FiChevronRight, FiBell 
+  FiMapPin, FiClock, FiChevronRight, FiBell, FiLogOut 
 } from "react-icons/fi"; 
 import "./CandidateDashboard.css";
 
@@ -18,10 +18,12 @@ export default function CandidateDashboard() {
   useEffect(() => {
     const loadData = async () => {
       try {
+        // Fetching both jobs and applications simultaneously
         const [jobsRes, appRes] = await Promise.all([
-          axios.get("/jobs/list/"),
-          axios.get("/applications/list/")
+          axios.get("/jobs/list/").catch(() => ({ data: [] })),
+          axios.get("/applications/list/").catch(() => ({ data: [] }))
         ]);
+
         setJobs(jobsRes.data || []);
         setApplications(appRes.data || []);
       } catch (err) {
@@ -32,6 +34,12 @@ export default function CandidateDashboard() {
     };
     loadData();
   }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    navigate("/login");
+  };
 
   const stats = [
     { label: "Applied", count: applications.length, icon: <FiBriefcase />, color: "#6366f1" },
@@ -54,6 +62,10 @@ export default function CandidateDashboard() {
           <button onClick={() => navigate("/candidate/jobs")}>Browse Jobs</button>
           <button onClick={() => navigate("/candidate/applications")}>My Applications</button>
           <button onClick={() => navigate("/candidate/profile")}>Profile</button>
+          
+          <button className="logout-btn" onClick={handleLogout} style={{ marginTop: 'auto', color: '#ef4444', display: 'flex', alignItems: 'center', gap: '8px', background: 'none', border: 'none', padding: '15px', cursor: 'pointer' }}>
+            <FiLogOut /> Logout
+          </button>
         </nav>
         <div className="sidebar-footer">© 2026 CareerHub</div>
       </aside>
@@ -92,7 +104,6 @@ export default function CandidateDashboard() {
           ))}
         </div>
 
-        {/* RECOMMENDED JOBS */}
         <div className="section-header">
           <h3>Recommended Jobs</h3>
           <button className="btn-text" onClick={() => navigate("/candidate/jobs")}>See all</button>
@@ -104,12 +115,13 @@ export default function CandidateDashboard() {
               <div key={job.id} className="job-row" onClick={() => navigate(`/candidate/job/${job.id}`)}>
                 <div className="job-brand">
                   <div className="company-logo-placeholder">
-                    {/* Safe access to the new display name */}
-                    {job.display_company_name ? job.display_company_name.charAt(0).toUpperCase() : "J"}
+                    {/* ✅ Uses company_name from your new Serializer */}
+                    {job.company_name ? job.company_name.charAt(0).toUpperCase() : "J"}
                   </div>
                   <div className="job-title-info">
                     <h4>{job.title}</h4>
-                    <p>{job.display_company_name || "Company Name Unavailable"}</p>
+                    {/* ✅ Changed from display_company_name to company_name */}
+                    <p>{job.company_name || "Company Name Unavailable"}</p>
                   </div>
                 </div>
                 
@@ -119,7 +131,9 @@ export default function CandidateDashboard() {
                 </div>
 
                 <div className="job-action">
-                  <span className="posted-date"><FiClock /> {new Date(job.created_at).toLocaleDateString()}</span>
+                  <span className="posted-date">
+                    <FiClock /> {job.created_at ? new Date(job.created_at).toLocaleDateString() : "Recently"}
+                  </span>
                   <FiChevronRight />
                 </div>
               </div>

@@ -97,36 +97,28 @@ const Field = ({ label, req, children }) => (
   </div>
 );
 
-/* ══════════════════════════════════
-   MAIN
-══════════════════════════════════ */
 export default function Profile() {
   const user = JSON.parse(localStorage.getItem("user") || "{}");
 
   const [educations, setEducations] = useState([]);
   const [profile, setProfile]       = useState(null);
   const [loading, setLoading]       = useState(true);
-  const [toast, setToast]           = useState(null);
+  const [toast, setToast]            = useState(null);
 
-  /* edu modal */
   const [eduModal, setEduModal] = useState(false);
   const [editId, setEditId]     = useState(null);
   const [eduForm, setEduForm]   = useState({ level: "", institution_name: "", degree: "", percentage: "", city: "" });
 
-  /* profile modal */
   const [profModal, setProfModal]   = useState(false);
-  const [profForm, setProfForm]     = useState({ phone: "" });
+  const [profForm, setProfForm]      = useState({ phone: "" });
 
-  /* skills modal */
   const [skillModal, setSkillModal] = useState(false);
   const [skillInput, setSkillInput] = useState("");
   const [skillDraft, setSkillDraft] = useState([]);
 
-  /* resume */
   const resumeRef = useRef();
   const [resumeUploading, setResumeUploading] = useState(false);
 
-  /* ── load ── */
   useEffect(() => {
     Promise.all([fetchEdu(), fetchProfile()]).finally(() => setLoading(false));
   }, []);
@@ -141,7 +133,12 @@ export default function Profile() {
   };
 
   const fetchProfile = async () => {
-    try { const r = await axios.get("/candidates/get-profile/"); setProfile(r.data); } catch {}
+    try { 
+      const r = await axios.get("/candidates/get-profile/"); 
+      setProfile(r.data); 
+    } catch (err) {
+      if (err.response?.status === 404) setProfile(null);
+    }
   };
 
   /* ── Education ── */
@@ -173,11 +170,18 @@ export default function Profile() {
 
   /* ── Profile ── */
   const openProf = () => { setProfForm({ phone: profile?.phone || "" }); setProfModal(true); };
+  
   const submitProf = async () => {
     try {
-      if (profile) await axios.put("/candidates/update-profile/", profForm);
-      else         await axios.post("/candidates/create-profile/", profForm);
-      setProfModal(false); fetchProfile(); flash("Profile updated");
+      if (profile) {
+        await axios.put("/candidates/update-profile/", profForm);
+      } else {
+        // For new user, we must ensure empty skills/resume don't block the post
+        await axios.post("/candidates/create-profile/", { ...profForm, skills: "" });
+      }
+      setProfModal(false); 
+      await fetchProfile(); 
+      flash("Profile updated");
     } catch (e) { flash(e.response?.data?.detail || "Error", "error"); }
   };
 
@@ -198,9 +202,14 @@ export default function Profile() {
   const saveSkills = async () => {
     try {
       const payload = { skills: skillDraft.join(", ") };
-      if (profile) await axios.put("/candidates/update-profile/", payload);
-      else         await axios.post("/candidates/create-profile/", payload);
-      setSkillModal(false); fetchProfile(); flash("Skills saved");
+      if (profile) {
+        await axios.put("/candidates/update-profile/", payload);
+      } else {
+        await axios.post("/candidates/create-profile/", { ...payload, phone: "" });
+      }
+      setSkillModal(false); 
+      await fetchProfile(); 
+      flash("Skills saved");
     } catch (e) { flash(e.response?.data?.detail || "Error", "error"); }
   };
 
@@ -209,38 +218,46 @@ export default function Profile() {
     const file = e.target.files[0];
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) return flash("Max file size is 5 MB", "error");
-    const ok = ["application/pdf", "application/msword",
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document"];
+    const ok = ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"];
     if (!ok.includes(file.type)) return flash("Only PDF or DOC files allowed", "error");
 
     const fd = new FormData();
     fd.append("resume", file);
+    
+    // If profile is new, backend needs the other non-null fields
+    if (!profile) {
+        fd.append("phone", "");
+        fd.append("skills", "");
+    }
+
     setResumeUploading(true);
     try {
-      if (profile) await axios.put("/candidates/update-profile/", fd, { headers: { "Content-Type": "multipart/form-data" } });
-      else         await axios.post("/candidates/create-profile/", fd, { headers: { "Content-Type": "multipart/form-data" } });
-      fetchProfile(); flash("Resume uploaded");
-    } catch (e) { flash(e.response?.data?.detail || "Upload failed", "error"); }
-    finally { setResumeUploading(false); e.target.value = ""; }
+      if (profile) {
+        await axios.put("/candidates/update-profile/", fd, { headers: { "Content-Type": "multipart/form- Harris" } });
+      } else {
+        await axios.post("/candidates/create-profile/", fd, { headers: { "Content-Type": "multipart/form-data" } });
+      }
+      await fetchProfile(); 
+      flash("Resume uploaded");
+    } catch (e) { 
+        flash(e.response?.data?.detail || "Upload failed", "error"); 
+    } finally { 
+        setResumeUploading(false); 
+        e.target.value = ""; 
+    }
   };
 
   const resumeName = profile?.resume
     ? decodeURIComponent(profile.resume.split("/").pop().split("?")[0])
     : null;
 
-  /* ── render ── */
   if (loading) return <div className="pf-loading"><div className="pf-spinner" /></div>;
 
   return (
     <div className="pf-root">
       <Toast toast={toast} />
-
-      {/* COVER */}
       <div className="pf-cover" />
-
       <div className="pf-container">
-
-        {/* HERO */}
         <div className="pf-hero-card">
           <div className="pf-hero-avatar-wrap">
             <Avatar name={user?.name} size={100} />
@@ -276,19 +293,13 @@ export default function Profile() {
           </div>
         </div>
 
-        {/* TWO-COL LAYOUT */}
         <div className="pf-layout">
-
-          {/* ── LEFT SIDEBAR ── */}
           <aside className="pf-sidebar">
-
-            {/* RESUME */}
             <div className="pf-card">
               <div className="pf-card-head">
                 <span className="pf-card-icon pf-card-icon--blue"><FileIcon size={15} /></span>
                 <h3 className="pf-card-title">Resume</h3>
               </div>
-
               {resumeName ? (
                 <div className="pf-resume-exists">
                   <div className="pf-resume-file-row">
@@ -299,39 +310,24 @@ export default function Profile() {
                     </div>
                   </div>
                   <div className="pf-resume-btns">
-                    <a className="pf-btn pf-btn--primary pf-btn--sm"
-                      href={profile.resume} target="_blank" rel="noreferrer">
+                    <a className="pf-btn pf-btn--primary pf-btn--sm" href={profile.resume} target="_blank" rel="noreferrer">
                       <DownloadIcon size={13} /> View / Download
                     </a>
-                    <button className="pf-btn pf-btn--outline pf-btn--sm"
-                      onClick={() => resumeRef.current?.click()}
-                      disabled={resumeUploading}>
-                      <UploadIcon size={13} />
-                      {resumeUploading ? "Uploading…" : "Replace"}
+                    <button className="pf-btn pf-btn--outline pf-btn--sm" onClick={() => resumeRef.current?.click()} disabled={resumeUploading}>
+                      <UploadIcon size={13} /> {resumeUploading ? "Uploading…" : "Replace"}
                     </button>
                   </div>
                 </div>
               ) : (
-                <div
-                  className={`pf-upload-zone ${resumeUploading ? "pf-upload-zone--loading" : ""}`}
-                  onClick={() => !resumeUploading && resumeRef.current?.click()}
-                >
+                <div className={`pf-upload-zone ${resumeUploading ? "pf-upload-zone--loading" : ""}`} onClick={() => !resumeUploading && resumeRef.current?.click()}>
                   <div className="pf-upload-ic"><UploadIcon size={26} /></div>
                   <p className="pf-upload-title">{resumeUploading ? "Uploading…" : "Upload Resume"}</p>
                   <p className="pf-upload-sub">PDF or DOC · Max 5 MB</p>
                 </div>
               )}
-
-              <input
-                ref={resumeRef}
-                type="file"
-                accept=".pdf,.doc,.docx"
-                style={{ display: "none" }}
-                onChange={uploadResume}
-              />
+              <input ref={resumeRef} type="file" accept=".pdf,.doc,.docx" style={{ display: "none" }} onChange={uploadResume} />
             </div>
 
-            {/* SKILLS */}
             <div className="pf-card">
               <div className="pf-card-head">
                 <span className="pf-card-icon pf-card-icon--violet"><StarIcon size={15} /></span>
@@ -340,7 +336,6 @@ export default function Profile() {
                   <EditIcon size={13} />
                 </button>
               </div>
-
               {skillList.length === 0 ? (
                 <button className="pf-empty-prompt" onClick={openSkills}>
                   <PlusIcon size={14} /> Add your skills
@@ -351,13 +346,9 @@ export default function Profile() {
                 </div>
               )}
             </div>
-
           </aside>
 
-          {/* ── MAIN COLUMN ── */}
           <main className="pf-main">
-
-            {/* EDUCATION */}
             <div className="pf-card">
               <div className="pf-card-head">
                 <span className="pf-card-icon pf-card-icon--green"><GradIcon size={15} /></span>
@@ -366,7 +357,6 @@ export default function Profile() {
                   <PlusIcon size={13} /> Add
                 </button>
               </div>
-
               {educations.length === 0 ? (
                 <div className="pf-empty-state">
                   <GradIcon size={40} />
@@ -401,20 +391,11 @@ export default function Profile() {
                               </div>
                             </div>
                             <div className="pf-edu-chips">
-                              <span className="pf-level-badge" style={{ background: m.bg, color: m.color }}>
-                                {m.label}
-                              </span>
-                              {edu.city && (
-                                <span className="pf-edu-chip">
-                                  <MapPinIcon size={11} /> {edu.city}
-                                </span>
-                              )}
+                              <span className="pf-level-badge" style={{ background: m.bg, color: m.color }}>{m.label}</span>
+                              {edu.city && <span className="pf-edu-chip"><MapPinIcon size={11} /> {edu.city}</span>}
                               {edu.percentage && (
                                 <span className="pf-edu-chip">
-                                  <svg width={11} height={11} viewBox="0 0 24 24" fill="none"
-                                    stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                                    <path d="M18 20V10M12 20V4M6 20v-6" />
-                                  </svg>
+                                  <svg width={11} height={11} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 20V10M12 20V4M6 20v-6" /></svg>
                                   {edu.percentage}%
                                 </span>
                               )}
@@ -428,22 +409,12 @@ export default function Profile() {
                 </div>
               )}
             </div>
-
           </main>
         </div>
       </div>
 
-      {/* ─── MODALS ─── */}
-
-      {/* Education modal */}
-      <Modal show={eduModal} title={editId ? "Edit Education" : "Add Education"}
-        onClose={() => { setEduModal(false); setEditId(null); }}
-        footer={
-          <>
-            <button className="pf-btn pf-btn--ghost" onClick={() => { setEduModal(false); setEditId(null); }}>Cancel</button>
-            <button className="pf-btn pf-btn--primary" onClick={submitEdu}>{editId ? "Update" : "Add Education"}</button>
-          </>
-        }>
+      <Modal show={eduModal} title={editId ? "Edit Education" : "Add Education"} onClose={() => { setEduModal(false); setEditId(null); }}
+        footer={<><button className="pf-btn pf-btn--ghost" onClick={() => { setEduModal(false); setEditId(null); }}>Cancel</button><button className="pf-btn pf-btn--primary" onClick={submitEdu}>{editId ? "Update" : "Add Education"}</button></>}>
         <Field label="Education Level" req>
           <select className="pf-input" value={eduForm.level} onChange={e => setEduForm({ ...eduForm, level: e.target.value })}>
             <option value="">Select level</option>
@@ -454,77 +425,25 @@ export default function Profile() {
           </select>
         </Field>
         <div className="pf-grid2">
-          <Field label="Institution Name" req>
-            <input className="pf-input" placeholder="e.g. Anna University"
-              value={eduForm.institution_name} onChange={e => setEduForm({ ...eduForm, institution_name: e.target.value })} />
-          </Field>
-          <Field label="City">
-            <input className="pf-input" placeholder="e.g. Chennai"
-              value={eduForm.city} onChange={e => setEduForm({ ...eduForm, city: e.target.value })} />
-          </Field>
+          <Field label="Institution Name" req><input className="pf-input" placeholder="Anna University" value={eduForm.institution_name} onChange={e => setEduForm({ ...eduForm, institution_name: e.target.value })} /></Field>
+          <Field label="City"><input className="pf-input" placeholder="Chennai" value={eduForm.city} onChange={e => setEduForm({ ...eduForm, city: e.target.value })} /></Field>
         </div>
         <div className="pf-grid2">
-          <Field label="Degree / Course" req>
-            <input className="pf-input" placeholder="e.g. B.Tech CSE"
-              value={eduForm.degree} onChange={e => setEduForm({ ...eduForm, degree: e.target.value })} />
-          </Field>
-          <Field label="Percentage / CGPA">
-            <input className="pf-input" placeholder="e.g. 85.4"
-              value={eduForm.percentage} onChange={e => setEduForm({ ...eduForm, percentage: e.target.value })} />
-          </Field>
+          <Field label="Degree / Course" req><input className="pf-input" placeholder="B.Tech" value={eduForm.degree} onChange={e => setEduForm({ ...eduForm, degree: e.target.value })} /></Field>
+          <Field label="Percentage"><input className="pf-input" placeholder="85" value={eduForm.percentage} onChange={e => setEduForm({ ...eduForm, percentage: e.target.value })} /></Field>
         </div>
       </Modal>
 
-      {/* Profile modal */}
-      <Modal show={profModal} title="Edit Profile"
-        onClose={() => setProfModal(false)}
-        footer={
-          <>
-            <button className="pf-btn pf-btn--ghost" onClick={() => setProfModal(false)}>Cancel</button>
-            <button className="pf-btn pf-btn--primary" onClick={submitProf}>Save Changes</button>
-          </>
-        }>
-        <Field label="Phone Number">
-          <input className="pf-input" placeholder="e.g. 9876543210"
-            value={profForm.phone} onChange={e => setProfForm({ ...profForm, phone: e.target.value })} />
-        </Field>
+      <Modal show={profModal} title="Edit Profile" onClose={() => setProfModal(false)}
+        footer={<><button className="pf-btn pf-btn--ghost" onClick={() => setProfModal(false)}>Cancel</button><button className="pf-btn pf-btn--primary" onClick={submitProf}>Save Changes</button></>}>
+        <Field label="Phone Number"><input className="pf-input" placeholder="9876543210" value={profForm.phone} onChange={e => setProfForm({ ...profForm, phone: e.target.value })} /></Field>
       </Modal>
 
-      {/* Skills modal */}
-      <Modal show={skillModal} title="Manage Skills"
-        onClose={() => setSkillModal(false)}
-        footer={
-          <>
-            <button className="pf-btn pf-btn--ghost" onClick={() => setSkillModal(false)}>Cancel</button>
-            <button className="pf-btn pf-btn--primary" onClick={saveSkills}>Save Skills</button>
-          </>
-        }>
-        <Field label="Add a Skill">
-          <div className="pf-skill-row">
-            <input className="pf-input" placeholder="e.g. React, Django, Python…"
-              value={skillInput}
-              onChange={e => setSkillInput(e.target.value)}
-              onKeyDown={e => { if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addSkill(); } }}
-            />
-            <button className="pf-btn pf-btn--primary" onClick={addSkill}>Add</button>
-          </div>
-          <p className="pf-hint">Press Enter or comma to add quickly</p>
-        </Field>
-        {skillDraft.length > 0 && (
-          <div className="pf-tags pf-tags--edit">
-            {skillDraft.map((s, i) => (
-              <span className="pf-tag pf-tag--removable" key={i}>
-                {s}
-                <button className="pf-tag-remove"
-                  onClick={() => setSkillDraft(skillDraft.filter((_, x) => x !== i))}>
-                  <XIcon size={10} />
-                </button>
-              </span>
-            ))}
-          </div>
-        )}
+      <Modal show={skillModal} title="Manage Skills" onClose={() => setSkillModal(false)}
+        footer={<><button className="pf-btn pf-btn--ghost" onClick={() => setSkillModal(false)}>Cancel</button><button className="pf-btn pf-btn--primary" onClick={saveSkills}>Save Skills</button></>}>
+        <Field label="Add a Skill"><div className="pf-skill-row"><input className="pf-input" placeholder="React..." value={skillInput} onChange={e => setSkillInput(e.target.value)} onKeyDown={e => { if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addSkill(); } }} /><button className="pf-btn pf-btn--primary" onClick={addSkill}>Add</button></div></Field>
+        {skillDraft.length > 0 && <div className="pf-tags pf-tags--edit">{skillDraft.map((s, i) => (<span className="pf-tag pf-tag--removable" key={i}>{s}<button className="pf-tag-remove" onClick={() => setSkillDraft(skillDraft.filter((_, x) => x !== i))}><XIcon size={10} /></button></span>))}</div>}
       </Modal>
-
     </div>
   );
 }

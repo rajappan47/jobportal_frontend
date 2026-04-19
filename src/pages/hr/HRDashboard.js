@@ -3,7 +3,8 @@ import axios from "../../api/axios";
 import { useNavigate } from "react-router-dom";
 import { 
   LayoutDashboard, Building2, Briefcase, Users, 
-  FileText, Plus, Bell, Search, TrendingUp, MoreHorizontal 
+  FileText, Plus, Bell, Search, TrendingUp, MoreHorizontal,
+  LogOut 
 } from "lucide-react";
 import "./HRDashboard.css";
 
@@ -13,17 +14,37 @@ export default function Dashboard() {
   const [stats, setStats] = useState({ jobs: 0, candidates: 0, applications: 0, hires: 0 });
   const [jobs, setJobs] = useState([]);
   const [applications, setApplications] = useState([]);
+  
+  // 🚀 FIX: Start with a placeholder or empty string instead of "azention"
+  const [companyName, setCompanyName] = useState(""); 
   const [loading, setLoading] = useState(true);
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    navigate("/login");
+  };
 
   useEffect(() => {
     const fetchDashboard = async () => {
       try {
-        const [jobsRes, appRes] = await Promise.all([
+        const [jobsRes, appRes, compRes] = await Promise.all([
           axios.get("/jobs/list/"),
-          axios.get("/applications/list/")
+          axios.get("/applications/list/"),
+          axios.get("/companies/list/") 
         ]);
+
         setJobs(jobsRes.data);
         setApplications(appRes.data);
+        
+        // 🚀 FIX: Map the company name from the current user's company profile
+        if (compRes.data && compRes.data.length > 0) {
+          setCompanyName(compRes.data[0].company_name);
+        } else {
+          // If no company exists yet for Rajappan, show a prompt
+          setCompanyName("No Company Linked");
+        }
+
         setStats({
           jobs: jobsRes.data.length,
           candidates: appRes.data.length,
@@ -31,7 +52,7 @@ export default function Dashboard() {
           hires: appRes.data.filter(a => a.status === "selected").length
         });
       } catch (err) {
-        console.error(err);
+        console.error("Dashboard data fetch error:", err);
       } finally {
         setLoading(false);
       }
@@ -43,11 +64,11 @@ export default function Dashboard() {
 
   return (
     <div className="modern-dashboard">
-      {/* 🔷 SIDEBAR */}
       <aside className="app-sidebar">
         <div className="sidebar-brand">
-          <div className="brand-icon">A</div>
-          <span>Azentio HR</span>
+          {/* Dynamic icon based on company name */}
+          <div className="brand-icon">{companyName ? companyName.charAt(0) : "H"}</div>
+          <span>{companyName || "HR Portal"}</span> 
         </div>
 
         <nav className="sidebar-nav">
@@ -62,6 +83,13 @@ export default function Dashboard() {
         </nav>
 
         <div className="sidebar-footer">
+          <button className="logout-pill" onClick={handleLogout} style={{
+            display: 'flex', alignItems: 'center', gap: '8px', background: 'none', 
+            border: 'none', color: '#ff7675', cursor: 'pointer', padding: '10px'
+          }}>
+             <LogOut size={18} /> <span>Logout</span>
+          </button>
+          
           <div className="user-pill">
             <div className="avatar">{user?.name?.charAt(0)}</div>
             <div className="user-info">
@@ -72,9 +100,7 @@ export default function Dashboard() {
         </div>
       </aside>
 
-      {/* 🔷 MAIN AREA */}
       <main className="app-main">
-        {/* TOP BAR */}
         <header className="main-header">
           <div className="search-bar">
             <Search size={18} />
@@ -88,13 +114,12 @@ export default function Dashboard() {
           </div>
         </header>
 
-        {/* WELCOME */}
         <section className="welcome-banner">
-          <h1>Good Morning, {user?.name.split(' ')[0]}! 👋</h1>
-          <p>You have {stats.applications} new applications to review today.</p>
+          <h1>Good Morning, {user?.name}! 👋</h1>
+          {/* 🚀 FIX: Dynamic company name in the welcome message */}
+          <p>You have {stats.applications} new applications to review for <strong>{companyName}</strong>.</p>
         </section>
 
-        {/* STATS GRID */}
         <div className="stats-grid">
           {[
             { label: "Active Jobs", val: stats.jobs, icon: <Briefcase color="#6366f1"/>, bg: "#eef2ff" },
@@ -113,14 +138,13 @@ export default function Dashboard() {
         </div>
 
         <div className="dashboard-layout-content">
-          {/* RECENT JOBS */}
           <section className="content-box">
             <div className="box-header">
               <h3>Active Postings</h3>
               <button className="text-link">View All</button>
             </div>
             <div className="job-stack">
-              {jobs.slice(0, 3).map(job => (
+              {jobs.length > 0 ? jobs.slice(0, 3).map(job => (
                 <div className="job-item" key={job.id}>
                   <div className="job-icon">{job.title.charAt(0)}</div>
                   <div className="job-details">
@@ -129,11 +153,10 @@ export default function Dashboard() {
                   </div>
                   <div className="job-status-pill">Active</div>
                 </div>
-              ))}
+              )) : <p className="empty-msg" style={{padding: '20px', color: '#666'}}>No jobs posted yet.</p>}
             </div>
           </section>
 
-          {/* TABLE */}
           <section className="content-box">
             <div className="box-header">
               <h3>Recent Candidates</h3>
@@ -150,7 +173,7 @@ export default function Dashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {applications.slice(0, 4).map(app => (
+                  {applications.length > 0 ? applications.slice(0, 4).map(app => (
                     <tr key={app.id}>
                       <td className="td-user">
                         <div className="small-avatar">{app.candidate_name?.charAt(0)}</div>
@@ -160,7 +183,9 @@ export default function Dashboard() {
                       <td><span className={`status-tag ${app.status}`}>{app.status}</span></td>
                       <td><MoreHorizontal size={18} cursor="pointer" /></td>
                     </tr>
-                  ))}
+                  )) : (
+                    <tr><td colSpan="4" style={{textAlign: 'center', padding: '20px', color: '#666'}}>No applications received.</td></tr>
+                  )}
                 </tbody>
               </table>
             </div>
