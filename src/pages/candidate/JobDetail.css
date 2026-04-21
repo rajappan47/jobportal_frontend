@@ -339,3 +339,37 @@
 }
 
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+/* AI Result Card Styling */
+/* AI Feedback Card Styling */
+.ai-feedback-card {
+  margin: 25px 0;
+  padding: 24px;
+  border-radius: 20px;
+  border-left: 8px solid;
+  animation: slideDown 0.5s ease;
+  background: white;
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+}
+
+.ai-feedback-card.shortlisted { background: #f0fdf4; border-color: #22c55e; }
+.ai-feedback-card.rejected { background: #fff1f2; border-color: #e11d48; }
+
+.feedback-header { display: flex; align-items: center; gap: 15px; margin-bottom: 15px; }
+.status-icon { font-size: 35px; }
+.status-icon.success { color: #22c55e; }
+.status-icon.fail { color: #e11d48; }
+
+.suggestions-box {
+  background: rgba(255, 255, 255, 0.7);
+  padding: 15px;
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,0.05);
+  font-size: 15px;
+  line-height: 1.6;
+  color: #334155;
+}
+
+.retry-note { margin-top: 15px; font-weight: 600; color: #9f1239; font-size: 13px; }
+.spin-icon { animation: spin 1s linear infinite; }
+@keyframes spin { 100% { transform: rotate(360deg); } }
+@keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }

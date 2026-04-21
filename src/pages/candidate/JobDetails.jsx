@@ -3,7 +3,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import axios from "../../api/axios";
 import { 
   FiArrowLeft, FiMapPin, FiBriefcase, FiClock, 
-  FiDollarSign, FiCalendar, FiSend, FiBookmark, FiShare2, FiExternalLink ,FiAward
+  FiDollarSign, FiCalendar, FiSend, FiBookmark, FiShare2, FiExternalLink, FiAward,
+  FiLoader, FiCheckCircle, FiXCircle 
 } from "react-icons/fi";
 import "./JobDetail.css";
 
@@ -14,15 +15,16 @@ export default function JobDetail() {
   const [jobData, setJobData] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // --- AI APPLICATION STATES ---
+  const [isApplying, setIsApplying] = useState(false);
+  const [aiResult, setAiResult] = useState(null);
+
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // We fetch the main job detail
         const jobRes = await axios.get(`/jobs/detail/${id}/`);
         const jobDetails = jobRes.data;
 
-        // NEW: Check if the backend gave us the related company data.
-        // If not, we fall back to placeholders to prevent crashes.
         setJobData({
           ...jobDetails,
           company_details: jobDetails.company_details || {
@@ -30,10 +32,9 @@ export default function JobDetail() {
             industry: "Technology",
             website: "https://example.com",
             logo_initial: (jobDetails.company_name || "J").charAt(0).toUpperCase(),
-            other_jobs: [] // We add an empty list for now
+            other_jobs: [] 
           }
         });
-
       } catch (err) {
         console.error("Error fetching job details", err);
       } finally {
@@ -43,12 +44,45 @@ export default function JobDetail() {
     fetchData();
   }, [id]);
 
+  // --- 🚀 HANDLE APPLICATION & POLLING ---
+  const handleApply = async () => {
+    setIsApplying(true);
+    setAiResult(null);
+
+    try {
+      // 1. Submit application to Django
+      await axios.post(`/applications/apply/${id}/`);
+      
+      // 2. Poll every 3 seconds to check if AI feedback is ready
+      const interval = setInterval(async () => {
+        try {
+          const res = await axios.get(`/applications/my-applications/`);
+          const latestApp = res.data.find(app => String(app.job) === String(id));
+
+          // If status changed from 'applied', AI is done
+          if (latestApp && latestApp.status !== 'applied') {
+            setAiResult(latestApp);
+            setIsApplying(false);
+            clearInterval(interval);
+          }
+        } catch (err) {
+          console.error("Polling AI status...", err);
+        }
+      }, 3000); 
+
+    } catch (err) {
+      alert(err.response?.data?.error || "Error applying for this position.");
+      setIsApplying(false);
+    }
+  };
+
   if (loading) return (
     <div className="loader-overlay">
       <div className="spinner-modern"></div>
       <p>Consulting with the recruiters...</p>
     </div>
   );
+
   if (!jobData) return <div className="error-state">We couldn't find that job. It might have been filled!</div>;
 
   return (
@@ -81,8 +115,18 @@ export default function JobDetail() {
           </div>
           
           <div className="hero-actions-panel">
-            <button className="apply-btn-hero">
-              Apply Now <FiSend />
+            <button 
+              className="apply-btn-hero" 
+              onClick={handleApply}
+              disabled={isApplying || aiResult}
+            >
+              {isApplying ? (
+                <>Analyzing... <FiLoader className="spin-icon" /></>
+              ) : aiResult ? (
+                "Applied Successfully"
+              ) : (
+                <>Apply Now <FiSend /></>
+              )}
             </button>
             <div className="action-row">
               <button className="icon-btn-circle" title="Save Job"><FiBookmark /></button>
@@ -90,6 +134,31 @@ export default function JobDetail() {
             </div>
           </div>
         </div>
+
+        {/* --- 🚀 DYNAMIC AI FEEDBACK SECTION --- */}
+        {aiResult && (
+          <div className={`ai-feedback-card ${aiResult.status}`}>
+            <div className="feedback-header">
+              {aiResult.status === 'shortlisted' ? 
+                <FiCheckCircle className="status-icon success" /> : 
+                <FiXCircle className="status-icon fail" />
+              }
+              <div>
+                <h3>AI Analysis Result: {aiResult.status.toUpperCase()}</h3>
+                <p className="score-text">Resume Match Score: <strong>{aiResult.match_score}%</strong></p>
+              </div>
+            </div>
+            <div className="feedback-body">
+              <p><strong>Recruiter AI Suggestions:</strong></p>
+              <div className="suggestions-box">
+                {aiResult.suggestions}
+              </div>
+              {aiResult.status === 'rejected' && (
+                <p className="retry-note">Keep refining your skills and apply for other roles in Chennai!</p>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* --- CONTENT GRID --- */}
         <div className="details-grid-layout">
@@ -139,10 +208,8 @@ export default function JobDetail() {
               <h4>About the Company</h4>
               <p>Explore opportunities with {jobData.company_details.name}. A global leader in {jobData.company_details.industry}.</p>
               
-              {/* --- 🚀 View Profile Link (Fixed Issue #2) --- */}
               <button 
                 className="view-profile-btn"
-                // Using jobData.company is assumed to be the ID of the company
                 onClick={() => navigate(`/candidate/company/${jobData.company}`)}
               >
                 View Company Profile
@@ -155,7 +222,7 @@ export default function JobDetail() {
           </div>
         </div>
 
-        {/* --- 🚀 DYNAMIC Other Jobs (Fixed Issue #1) --- */}
+        {/* --- OTHER JOBS SECTION --- */}
         <div className="other-jobs-section">
           <h3>More jobs from {jobData.company_details.name}</h3>
           
