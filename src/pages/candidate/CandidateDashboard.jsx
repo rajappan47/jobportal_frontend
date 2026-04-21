@@ -18,14 +18,26 @@ export default function CandidateDashboard() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        // Fetching both jobs and applications simultaneously
         const [jobsRes, appRes] = await Promise.all([
           axios.get("/jobs/list/").catch(() => ({ data: [] })),
           axios.get("/applications/list/").catch(() => ({ data: [] }))
         ]);
 
-        setJobs(jobsRes.data || []);
-        setApplications(appRes.data || []);
+        const fetchedJobs = jobsRes.data || [];
+        const fetchedApps = appRes.data || [];
+
+        // Sorting Logic: Not Applied first, then by Date
+        const sortedJobs = [...fetchedJobs].sort((a, b) => {
+          const isAApplied = fetchedApps.some(app => app.job === a.id || app.job_id === a.id);
+          const isBApplied = fetchedApps.some(app => app.job === b.id || app.job_id === b.id);
+          if (isAApplied === isBApplied) {
+            return new Date(b.created_at) - new Date(a.created_at);
+          }
+          return isAApplied ? 1 : -1;
+        });
+
+        setJobs(sortedJobs);
+        setApplications(fetchedApps);
       } catch (err) {
         console.error("Error fetching data", err);
       } finally {
@@ -41,13 +53,23 @@ export default function CandidateDashboard() {
     navigate("/login");
   };
 
+  const getJobStatus = (jobId) => {
+    const app = applications.find(a => a.job === jobId || a.job_id === jobId);
+    return app ? app.status?.toLowerCase() : null;
+  };
+
   const stats = [
     { label: "Applied", count: applications.length, icon: <FiBriefcase />, color: "#6366f1" },
-    { label: "Shortlisted", count: applications.filter(a => a.status === "shortlisted").length, icon: <FiCheckCircle />, color: "#10b981" },
+    { label: "Shortlisted", count: applications.filter(a => a.status === "shortlisted" || a.status === "selected").length, icon: <FiCheckCircle />, color: "#10b981" },
     { label: "Rejected", count: applications.filter(a => a.status === "rejected").length, icon: <FiXCircle />, color: "#ef4444" },
   ];
 
-  if (loading) return <div className="loader">Loading Dashboard...</div>;
+  if (loading) return (
+    <div className="loader-container">
+      <div className="spinner"></div>
+      <p>Building your professional workspace...</p>
+    </div>
+  );
 
   return (
     <div className="dashboard-container">
@@ -63,7 +85,7 @@ export default function CandidateDashboard() {
           <button onClick={() => navigate("/candidate/applications")}>My Applications</button>
           <button onClick={() => navigate("/candidate/profile")}>Profile</button>
           
-          <button className="logout-btn" onClick={handleLogout} style={{ marginTop: 'auto', color: '#ef4444', display: 'flex', alignItems: 'center', gap: '8px', background: 'none', border: 'none', padding: '15px', cursor: 'pointer' }}>
+          <button className="logout-btn" onClick={handleLogout}>
             <FiLogOut /> Logout
           </button>
         </nav>
@@ -73,29 +95,39 @@ export default function CandidateDashboard() {
       {/* MAIN CONTENT */}
       <main className="main-content">
         <header className="top-bar">
-          <div className="search-box">
-            <FiSearch />
-            <input type="text" placeholder="Search jobs..." />
+          <div className="search-wrapper">
+            <FiSearch className="search-icon" />
+            <input 
+              type="text" 
+              placeholder="Search for opportunities..." 
+              className="main-search-input"
+            />
           </div>
-          <div className="user-nav">
-            <FiBell />
-            <div className="user-profile-sm">
-              <span>{user?.name || "User"}</span>
-              <div className="avatar">{user?.name?.charAt(0).toUpperCase() || "U"}</div>
+          <div className="header-actions">
+            <div className="notification-wrapper">
+              <FiBell />
+              <span className="notif-dot"></span>
+            </div>
+            <div className="user-profile-header">
+              <div className="user-info-text">
+                <span className="user-name">{user?.name || "nithya"}</span>
+                <span className="user-role">Candidate</span>
+              </div>
+              <div className="avatar-header">{user?.name?.charAt(0).toUpperCase() || "N"}</div>
             </div>
           </div>
         </header>
 
         <section className="welcome-hero">
-          <h1>Welcome back, {user?.name?.split(' ')[0] || "Candidate"}!</h1>
-          <p>We found {jobs.length} new opportunities for you.</p>
+          <h1>Welcome back, {user?.name?.split(' ')[0] || "nithya"}!</h1>
+          <p>You have {jobs.filter(j => !getJobStatus(j.id)).length} new job matches today.</p>
         </section>
 
         {/* STATS */}
         <div className="stats-grid">
           {stats.map((stat, i) => (
             <div key={i} className="stat-card">
-              <div className="stat-icon" style={{ color: stat.color, background: `${stat.color}15` }}>{stat.icon}</div>
+              <div className="stat-icon" style={{ color: stat.color, background: `${stat.color}10` }}>{stat.icon}</div>
               <div className="stat-info">
                 <h3>{stat.count}</h3>
                 <p>{stat.label}</p>
@@ -104,42 +136,62 @@ export default function CandidateDashboard() {
           ))}
         </div>
 
+        {/* SECTION HEADER */}
         <div className="section-header">
           <h3>Recommended Jobs</h3>
-          <button className="btn-text" onClick={() => navigate("/candidate/jobs")}>See all</button>
+          <button className="see-all-btn" onClick={() => navigate("/candidate/jobs")}>
+            See All <FiChevronRight />
+          </button>
         </div>
 
+        {/* JOB CARDS */}
         <div className="jobs-list">
           {jobs.length > 0 ? (
-            jobs.slice(0, 5).map(job => (
-              <div key={job.id} className="job-row" onClick={() => navigate(`/candidate/job/${job.id}`)}>
-                <div className="job-brand">
-                  <div className="company-logo-placeholder">
-                    {/* ✅ Uses company_name from your new Serializer */}
-                    {job.company_name ? job.company_name.charAt(0).toUpperCase() : "J"}
+            jobs.slice(0, 6).map(job => {
+              const status = getJobStatus(job.id);
+              return (
+                <div 
+                  key={job.id} 
+                  className={`job-row ${status ? `status-border-${status}` : "new-job-border"}`}
+                  onClick={() => navigate(`/candidate/job/${job.id}`)}
+                >
+                  <div className="job-row-left">
+                    <div className="company-logo-box">
+                      {job.company_name ? job.company_name.charAt(0).toUpperCase() : "J"}
+                    </div>
+                    <div className="job-main-info">
+                      <h4>{job.title}</h4>
+                      <p className="company-name">{job.company_name || "Enterprise Ltd"}</p>
+                    </div>
                   </div>
-                  <div className="job-title-info">
-                    <h4>{job.title}</h4>
-                    {/* ✅ Changed from display_company_name to company_name */}
-                    <p>{job.company_name || "Company Name Unavailable"}</p>
+                  
+                  <div className="job-row-center">
+                    <div className="meta-pill">
+                      <FiMapPin /> <span>{job.location || "Remote"}</span>
+                    </div>
+                    <div className="meta-pill type-badge">
+                      <span>{job.job_type || "Full-Time"}</span>
+                    </div>
                   </div>
-                </div>
-                
-                <div className="job-meta">
-                  <span><FiMapPin /> {job.location || "Remote"}</span>
-                  <span className="badge-type">{job.job_type || "Full-Time"}</span>
-                </div>
 
-                <div className="job-action">
-                  <span className="posted-date">
-                    <FiClock /> {job.created_at ? new Date(job.created_at).toLocaleDateString() : "Recently"}
-                  </span>
-                  <FiChevronRight />
+                  <div className="job-row-right">
+                    <div className="status-container">
+                      {status ? (
+                        <span className={`status-pill pill-${status}`}>{status}</span>
+                      ) : (
+                        <span className="status-pill pill-new">New Match</span>
+                      )}
+                    </div>
+                    <div className="time-info">
+                      <FiClock /> <span>{job.created_at ? new Date(job.created_at).toLocaleDateString() : "Today"}</span>
+                    </div>
+                    <FiChevronRight className="chevron-icon" />
+                  </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           ) : (
-            <div className="empty-state">No jobs available at the moment.</div>
+            <div className="empty-state">No jobs found matching your profile.</div>
           )}
         </div>
       </main>
